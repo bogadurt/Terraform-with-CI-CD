@@ -2,7 +2,8 @@ name: 'Terraform Plan Apply'
 
 on:
   push:
-    branches: ['main']
+    branches:
+      - 'main'
 
 jobs:
   terraform-plan:
@@ -10,32 +11,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the repository to the GitHub Actions runner
       - name: Checkout
-        uses: actions/checkout@v3
-      # Login to Azure
-      - name: Login via Az module
-        uses: azure/login@v1
+        uses: actions/checkout@v2
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v1
         with:
-          creds: ${{secrets.AZURE_CREDENTIALS}}
-          enable-AzPSSession: true
+          terraform_version: 0.15.0
 
-      # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+      - name: Set Azure Service Principal variables
+        run: |
+          echo "export ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "export ARM_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}" >> $GITHUB_ENV
+          echo "export ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
+          echo "export ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
 
-      # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
-      - name: Terraform Init
+      - name: Authenticate using Azure Service Principal
         run: terraform init
 
-      # Generate Terraform execution Plan
       - name: Terraform Plan
         run: terraform plan -out=tfplan.out
-      # Save terraform plan
-      - name: archive Terraform Plan
+
+      - name: Archive Terraform Plan
         uses: actions/upload-artifact@v2
         with:
           name: tfplan
           path: tfplan.out
-
-  
